@@ -1,0 +1,53 @@
+name: Scan flight deals
+
+# This is the "active scanner". It runs on a schedule (and on demand), refreshes
+# data/deals.json + data/history.json, and commits them back. That push is what
+# triggers a fresh Vercel deploy, so the site always shows the latest fares.
+#
+# Setup: add a repository secret named TRAVELPAYOUTS_TOKEN
+# (Settings -> Secrets and variables -> Actions). Optionally add TRAVELPAYOUTS_MARKER
+# (affiliate id) and a repository variable TRAVELPAYOUTS_CURRENCY.
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # every 6 hours (UTC). Edit to scan more or less often.
+  workflow_dispatch: {} # adds a "Run workflow" button in the Actions tab
+
+permissions:
+  contents: write # lets the job push the refreshed data files
+
+concurrency:
+  group: scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run scan
+        env:
+          TRAVELPAYOUTS_TOKEN: ${{ secrets.TRAVELPAYOUTS_TOKEN }}
+          TRAVELPAYOUTS_MARKER: ${{ secrets.TRAVELPAYOUTS_MARKER }}
+          TRAVELPAYOUTS_CURRENCY: ${{ vars.TRAVELPAYOUTS_CURRENCY || 'usd' }}
+        run: npm run scan
+
+      - name: Commit refreshed data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/deals.json data/history.json
+          if git diff --staged --quiet; then
+            echo "No data changes this run."
+          else
+            git commit -m "chore(scan): refresh flight deals"
+            git push
+          fi
