@@ -1,8 +1,12 @@
 {
-  "generatedAt": null,
+  "generatedAt": "2026-06-25T19:41:53.155Z",
   "currency": "usd",
   "origins": [],
-  "stats": { "faresSeen": 0, "routesTracked": 0, "dealCount": 0 },
+  "stats": {
+    "faresSeen": 0,
+    "routesTracked": 0,
+    "dealCount": 0
+  },
   "deals": [],
   "cheapest": []
 }
